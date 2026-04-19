@@ -1,0 +1,37 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    build_app(
+      scheme: "Huggy",
+      export_method: "app-store"
+    )
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Upload metadata only (no binary)"
+  lane :upload_metadata do
+    deliver(
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      force: true
+    )
+  end
+
+  desc "Full release: build, upload, submit for review"
+  lane :release do
+    build_app(
+      scheme: "Huggy",
+      export_method: "app-store"
+    )
+    upload_to_app_store(
+      submit_for_review: true,
+      automatic_release: true,
+      skip_screenshots: true,
+      force: true
+    )
+  end
+end

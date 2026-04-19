@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huggy - Hugs for Two</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(180deg, #FFF0EB 0%, #FFE4DC 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #3D1C12;
+            padding: 40px 20px;
+        }
+        .container { max-width: 480px; text-align: center; }
+        .heart {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: float 2s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+        .tagline {
+            font-size: 20px;
+            color: #9B6B60;
+            margin-bottom: 32px;
+        }
+        .description {
+            font-size: 17px;
+            line-height: 1.6;
+            color: #5C3D34;
+            margin-bottom: 40px;
+        }
+        .cta {
+            display: inline-block;
+            background: #E8735A;
+            color: white;
+            font-size: 17px;
+            font-weight: 600;
+            padding: 16px 40px;
+            border-radius: 26px;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+        .cta:hover { transform: scale(1.05); }
+        .footer {
+            margin-top: 60px;
+            font-size: 14px;
+            color: #9B6B60;
+        }
+        .footer a { color: #E8735A; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="heart">🤗</div>
+        <h1>Huggy</h1>
+        <p class="tagline">hugs for two</p>
+        <p class="description">
+            A private little app just for you and your partner.
+            Send virtual hugs anytime, request a real one when you need it,
+            and watch your streak grow day by day.
+        </p>
+        <a href="https://apps.apple.com/app/huggy/id000000000" class="cta">Download on the App Store</a>
+        <div class="footer">
+            <p><a href="privacy.html">Privacy Policy</a></p>
+            <p style="margin-top: 8px;">&copy; 2026 Huggy</p>
+        </div>
+    </div>
+</body>
+</html>
