@@ -1,99 +1,95 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
-const { getMessaging } = require("firebase-admin/messaging");
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
 
-initializeApp();
+admin.initializeApp();
 
-const db = getFirestore();
+const db = admin.firestore();
 
 // Trigger: new hug created → notify receiver
-exports.onHugCreated = onDocumentCreated("hugs/{hugId}", async (event) => {
-  const snap = event.data;
-  if (!snap) return;
+exports.onHugCreated = functions.firestore
+  .document("hugs/{hugId}")
+  .onCreate(async (snap, context) => {
+    const hug = snap.data();
+    const { receiverId, senderId, hugType } = hug;
 
-  const hug = snap.data();
-  const { receiverId, senderId, hugType } = hug;
+    // Get sender name
+    const senderDoc = await db.collection("users").doc(senderId).get();
+    const senderName = senderDoc.exists
+      ? senderDoc.data().displayName
+      : "Someone";
 
-  // Get sender name
-  const senderDoc = await db.collection("users").doc(senderId).get();
-  const senderName = senderDoc.exists
-    ? senderDoc.data().displayName
-    : "Someone";
+    // Get receiver FCM token
+    const receiverDoc = await db.collection("users").doc(receiverId).get();
+    if (!receiverDoc.exists) return null;
 
-  // Get receiver FCM token
-  const receiverDoc = await db.collection("users").doc(receiverId).get();
-  if (!receiverDoc.exists) return;
+    const fcmToken = receiverDoc.data().fcmToken;
+    if (!fcmToken) return null;
 
-  const fcmToken = receiverDoc.data().fcmToken;
-  if (!fcmToken) return;
+    const hugId = context.params.hugId;
 
-  const hugId = event.params.hugId;
-
-  const message = {
-    token: fcmToken,
-    notification: {
-      title: `${senderName} sent you a hug!`,
-      body: `You received a ${hugType} hug 🤗`,
-    },
-    data: {
-      hugId: hugId,
-      type: "hug_received",
-    },
-    apns: {
-      payload: {
-        aps: {
-          sound: "default",
-          badge: 1,
+    const message = {
+      token: fcmToken,
+      notification: {
+        title: `${senderName} sent you a hug!`,
+        body: `You received a ${hugType} hug 🤗`,
+      },
+      data: {
+        hugId: hugId,
+        type: "hug_received",
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+            badge: 1,
+          },
         },
       },
-    },
-  };
+    };
 
-  try {
-    await getMessaging().send(message);
+    try {
+      await admin.messaging().send(message);
 
-    // Update streak
-    const coupleId = hug.coupleId;
-    if (coupleId) {
-      const coupleRef = db.collection("couples").doc(coupleId);
-      const coupleDoc = await coupleRef.get();
-      if (coupleDoc.exists) {
-        const coupleData = coupleDoc.data();
-        const lastHugAt = coupleData.lastHugAt
-          ? coupleData.lastHugAt.toDate()
-          : null;
-        const now = new Date();
-        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+      // Update streak
+      const coupleId = hug.coupleId;
+      if (coupleId) {
+        const coupleRef = db.collection("couples").doc(coupleId);
+        const coupleDoc = await coupleRef.get();
+        if (coupleDoc.exists) {
+          const coupleData = coupleDoc.data();
+          const lastHugAt = coupleData.lastHugAt
+            ? coupleData.lastHugAt.toDate()
+            : null;
+          const now = new Date();
+          const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 
-        let newStreak = coupleData.hugStreak || 0;
+          let newStreak = coupleData.hugStreak || 0;
 
-        if (lastHugAt && lastHugAt > oneDayAgo) {
-          // Already hugged today, no streak change
-        } else if (lastHugAt && lastHugAt > twoDaysAgo) {
-          // Hugged yesterday, increment streak
-          newStreak += 1;
-        } else {
-          // Streak broken or first hug
-          newStreak = 1;
+          if (lastHugAt && lastHugAt > oneDayAgo) {
+            // Already hugged today, no streak change
+          } else if (lastHugAt && lastHugAt > twoDaysAgo) {
+            // Hugged yesterday, increment streak
+            newStreak += 1;
+          } else {
+            // Streak broken or first hug
+            newStreak = 1;
+          }
+
+          await coupleRef.update({ hugStreak: newStreak });
         }
-
-        await coupleRef.update({ hugStreak: newStreak });
       }
+    } catch (error) {
+      console.error("Error sending hug notification:", error);
     }
-  } catch (error) {
-    console.error("Error sending hug notification:", error);
-  }
-});
+
+    return null;
+  });
 
 // Trigger: hug request → notify partner
-exports.onHugRequested = onDocumentCreated(
-  "hugRequests/{reqId}",
-  async (event) => {
-    const snap = event.data;
-    if (!snap) return;
-
+exports.onHugRequested = functions.firestore
+  .document("hugRequests/{reqId}")
+  .onCreate(async (snap, context) => {
     const request = snap.data();
     const { senderUid, receiverUid } = request;
 
@@ -105,10 +101,10 @@ exports.onHugRequested = onDocumentCreated(
 
     // Get receiver FCM token
     const receiverDoc = await db.collection("users").doc(receiverUid).get();
-    if (!receiverDoc.exists) return;
+    if (!receiverDoc.exists) return null;
 
     const fcmToken = receiverDoc.data().fcmToken;
-    if (!fcmToken) return;
+    if (!fcmToken) return null;
 
     const message = {
       token: fcmToken,
@@ -130,9 +126,10 @@ exports.onHugRequested = onDocumentCreated(
     };
 
     try {
-      await getMessaging().send(message);
+      await admin.messaging().send(message);
     } catch (error) {
       console.error("Error sending hug request notification:", error);
     }
-  }
-);
+
+    return null;
+  });
